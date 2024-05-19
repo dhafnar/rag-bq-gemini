@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BBC Articles Knowledge Base</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <style>
+        body {
+            background: #FFFFFF;
+            font-family: 'Roboto', sans-serif;
+            color: #333333;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        h2 {
+            color: #000000;
+            font-weight: 500;
+        }
+
+        .input-field input[type="text"] {
+            border-bottom: 1px solid #000000;
+            box-shadow: 0 1px 0 0 #000000;
+            width: 70%;
+        }
+
+        .input-field {
+            width: 100%;
+        }
+
+        .input-field .prefix.active {
+            color: #CC0000;
+        }
+
+        .btn {
+            background-color: #CC0000;
+            color: #FFFFFF;
+            margin-left: 20px; /* Added for alignment */
+        }
+
+        #geminiResponse {
+            display: none; /* Initially hidden */
+            margin-top: 20px;
+            background-color: #F5F5F5;
+            color: #333333;
+        }
+
+        #results li {
+            background-color: #E0E0E0;
+            margin-top: 5px;
+            padding: 10px;
+            border-radius: 2px;
+        }
+
+        .search-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+    <script>
+        let endpoint = '' // TODO specify your cloud function here
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('question');
+            const sendButton = document.querySelector('.btn');
+
+            sendButton.addEventListener('click', function () {
+                sendQuestion();
+            });
+
+            input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    sendQuestion();
+                }
+            });
+
+            async function sendQuestion() {
+                const questionInput = document.getElementById('question');
+                const userQuery = questionInput.value;
+                sendButton.innerText = 'Loading...';
+                sendButton.disabled = true;
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_query: userQuery,
+                            top_num: 5
+                        }),
+                    });
+                    if (!response.ok) throw new Error(`Network response was not ok. Status: ${response.status}`);
+                    const data = await response.json();
+                    displayGeminiResponse(data.geminiResponse);
+                    displaySearchResults(data.searchResults);
+                } catch (error) {
+                    console.error('There has been a problem with your fetch operation:', error);
+                    displayGeminiResponse(`<p>Error fetching data: ${error.message}</p>`);
+                } finally {
+                    sendButton.innerText = 'Send';
+                    sendButton.disabled = false;
+                    questionInput.value = '';
+                }
+            }
+
+            function displayGeminiResponse(htmlString) {
+                const geminiResponse = document.getElementById('geminiResponse');
+                geminiResponse.style.display = 'block';
+                geminiResponse.innerHTML = `${htmlString}`
+            }
+
+            function displaySearchResults(results) {
+                const resultsList = document.getElementById('results');
+                resultsList.innerHTML = '<h6>Search Results:</h6>';
+                results.forEach(result => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${result.title}</strong><p>${result.content}</p>`;
+                    resultsList.appendChild(li);
+                });
+            }
+        });
+    </script>
+
+</head>
+<body>
+<div class="container">
+    <h3>BBC Articles Knowledge Base</h3>
+    <div class="search-row">
+        <div class="input-field">
+            <i class="material-icons prefix">search</i>
+            <input type="text" id="question" class="validate" placeholder="Enter your question here">
+        </div>
+        <button class="btn waves-effect waves-light red">Send
+            <i class="material-icons right">send</i>
+        </button>
+    </div>
+    <div id="geminiResponse" class="card-panel white lighten-2">
+    </div>
+    <ul id="results"></ul>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</body>
+</html>
